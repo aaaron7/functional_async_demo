@@ -33,6 +33,7 @@ func <>(left : AsyncFunc , right : AsyncFunc) -> AsyncFunc{
         
         var leftComplete = false
         var rightComplete = false
+        var finishedComplete = false
         
         var leftResult:AnyObject? = nil
         var rightResult:AnyObject? = nil
@@ -40,8 +41,13 @@ func <>(left : AsyncFunc , right : AsyncFunc) -> AsyncFunc{
         let checkComplete = {
             print ("checking")
             if leftComplete && rightComplete{
-                let finalResult:[AnyObject] = [leftResult!, rightResult!]
-                complete(finalResult, nil)
+                objc_sync_enter(finishedComplete)
+                if !finishedComplete{
+                    let finalResult:[AnyObject] = [leftResult!, rightResult!]
+                    complete(finalResult, nil)
+                    finishedComplete = true
+                }
+                objc_sync_exit(finishedComplete)
             }
         }
         
@@ -50,7 +56,7 @@ func <>(left : AsyncFunc , right : AsyncFunc) -> AsyncFunc{
                 complete(nil, error)
                 return
             }
-            
+
             leftComplete = true
             leftResult = result;
             checkComplete()
@@ -61,7 +67,7 @@ func <>(left : AsyncFunc , right : AsyncFunc) -> AsyncFunc{
                 complete(nil, error)
                 return
             }
-            
+
             rightComplete = true
             rightResult = result;
             checkComplete()
